@@ -33,8 +33,8 @@ spec:
         app: {{ template "stan.name" . }}
         chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     spec:
-      {{- if .Values.stan.nats.serviceRoleAuth.enabled }}
-      serviceAccountName: {{ template "stan.serviceAccountName" . }}
+      {{- if .Values.serviceAccountName }}
+      serviceAccountName: {{ .Values.serviceAccountName }}
       {{- end }}
 {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
