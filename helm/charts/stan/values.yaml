@@ -287,6 +287,10 @@ nats:
     connectErrorReports:
     reconnectErrorReports:
 
+  encryption:
+    enabled: false
+    cipher: AES
+
   #######################
   #                     #
   #  TLS Configuration  #
