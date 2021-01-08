@@ -1,0 +1,43 @@
+{{ if and .Values.nats.encryption.enabled .Values.nats.encryption.vault }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nats-streaming-vault-agent-config
+  namespace: platform
+data:
+  config.json: |
+    {
+      "auto_auth": {
+        "method": {
+          "type": "aws",
+          "config": {
+            "type": "iam",
+            "role": {{ .Values.nats.encryption.vault.role | quote }}
+          }
+        },
+        "sink": [
+          {
+            "type": "file",
+            "config": {
+              "path": "/home/vault/.vault-token"
+            }
+          }
+        ]
+      },
+      "exit_after_auth": true,
+      "pid_file": "/home/vault/.pid",
+      "vault": {
+        "address": {{ .Values.nats.encryption.vault.address | quote }},
+        "tls_skip_verify": true
+      },
+      "template": [
+        {
+          "destination": "/vault/secret/nats",
+          "contents": {{ `"{{ with secret \"secret/nats\" }}{{ range $k, $v := .Data }}export {{ $k }}=\"{{ $v }}\"\n{{ end }}{{ end }}",` }}
+          "left_delimiter": {{ `"{{"` }},
+          "right_delimiter": {{ `"}}"` }}
+        }
+      ]
+    }
+{{ end }}

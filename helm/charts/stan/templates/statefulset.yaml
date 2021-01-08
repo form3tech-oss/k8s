@@ -68,6 +68,13 @@ spec:
         secret:
           secretName: {{ .Values.stan.credentials.secret.name }}
       {{- end }}
+      {{ if and .Values.nats.encryption.enabled .Values.nats.encryption.vault }}
+      - name: vault-secret
+        emptyDir: {}
+      - name: vault-agent-config
+        configMap:
+        name: nats-streaming-vault-agent-config
+      {{ end }}
 
       # Local volume shared with the reloader.
       - name: pid
@@ -88,8 +95,18 @@ spec:
             topologyKey: kubernetes.io/hostname
         {{- end }}
 
-      {{ if .Values.extraInitContainers }}
-      initContainers: {{ toYaml .Values.extraInitContainers | nindent 8 }}
+      {{ if and .Values.nats.encryption.enabled .Values.nats.encryption.vault }}
+      initContainers:
+        - name: vault-agent
+          image: {{ .Values.nats.encryption.vault.image }}
+          command: ["/bin/sh", "-ec", "vault agent -config=/vault/etc/config.json"]
+          volumeMounts:
+          - name: vault-imagePullSecrets
+            mountPath: /vault/secret
+            readOnly: false
+          - name: vault-agent-config
+            mountPath: /vault/etc/config.json
+            subPath: config.json
       {{- end }}
 
       containers:
@@ -181,6 +198,11 @@ spec:
           {{- end }}
           - name: pid
             mountPath: /var/run/stan
+          {{- if and .Values.nats.encryption.enabled .Values.nats.encryption.vault }}
+          - name: vault-secret
+            mountPath: /vault/secret
+            readOnly: true
+          {{- end }}
 
         {{- if eq .Values.store.type "file" }}
         {{- if .Values.store.backup.enabled }}
