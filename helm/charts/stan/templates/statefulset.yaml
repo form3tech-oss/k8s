@@ -101,7 +101,7 @@ spec:
           image: {{ .Values.nats.encryption.vault.image }}
           command: ["/bin/sh", "-ec", "vault agent -config=/vault/etc/config.json"]
           volumeMounts:
-          - name: vault-imagePullSecrets
+          - name: vault-secret
             mountPath: /vault/secret
             readOnly: false
           - name: vault-agent-config
