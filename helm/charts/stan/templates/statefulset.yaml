@@ -73,7 +73,7 @@ spec:
         emptyDir: {}
       - name: vault-agent-config
         configMap:
-        name: nats-streaming-vault-agent-config
+          name: nats-streaming-vault-agent-config
       {{ end }}
 
       # Local volume shared with the reloader.
