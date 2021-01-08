@@ -46,6 +46,7 @@ stan:
 nameOverride: ""
 imagePullSecrets: []
 serviceAccountName: ""
+serviceAccountAnnotations: []
 podSecurityPolicy: ""
 
 # Annotations to add to the NATS pods
