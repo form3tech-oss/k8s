@@ -33,8 +33,8 @@ spec:
         app: {{ template "stan.name" . }}
         chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
     spec:
-      {{- if .Values.stan.nats.serviceRoleAuth.enabled }}
-      serviceAccountName: {{ template "stan.serviceAccountName" . }}
+      {{- if .Values.serviceAccountName }}
+      serviceAccountName: {{ .Values.serviceAccountName }}
       {{- end }}
 {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -68,6 +68,13 @@ spec:
         secret:
           secretName: {{ .Values.stan.credentials.secret.name }}
       {{- end }}
+      {{ if and .Values.nats.encryption.enabled .Values.nats.encryption.vault }}
+      - name: vault-secret
+        emptyDir: {}
+      - name: vault-agent-config
+        configMap:
+          name: nats-streaming-vault-agent-config
+      {{ end }}
 
       # Local volume shared with the reloader.
       - name: pid
@@ -87,12 +94,30 @@ spec:
                 - {{ template "stan.name" . }}
             topologyKey: kubernetes.io/hostname
         {{- end }}
+
+      {{ if and .Values.nats.encryption.enabled .Values.nats.encryption.vault }}
+      initContainers:
+        - name: vault-agent
+          image: {{ .Values.nats.encryption.vault.image }}
+          command: ["/bin/sh", "-ec", "vault agent -config=/vault/etc/config.json"]
+          volumeMounts:
+          - name: vault-secret
+            mountPath: /vault/secret
+            readOnly: false
+          - name: vault-agent-config
+            mountPath: /vault/etc/config.json
+            subPath: config.json
+      {{- end }}
+
       containers:
         ####################
         #  NATS Streaming  #
         ####################
         - name: stan
           image: {{ .Values.stan.image }}
+          {{ if .Values.stan.command }}
+          command: {{ .Values.stan.command }}
+          {{- end }}
           args:
           - -sc
           - /etc/stan-config/stan.conf
@@ -173,6 +198,11 @@ spec:
           {{- end }}
           - name: pid
             mountPath: /var/run/stan
+          {{- if and .Values.nats.encryption.enabled .Values.nats.encryption.vault }}
+          - name: vault-secret
+            mountPath: /vault/secret
+            readOnly: true
+          {{- end }}
 
         {{- if eq .Values.store.type "file" }}
         {{- if .Values.store.backup.enabled }}
